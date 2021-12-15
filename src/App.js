@@ -98,11 +98,12 @@ Header.propTypes = {
 
 function Stats(props) {
   const playerCount = props.players.length;
-  var timeElapsed = JSON.parse(window.localStorage.getItem('time_state'))['seconds'];
+  var timeElapsed = JSON.parse(window.localStorage.getItem('time_state'));
   var totalPlayerPoints = props.players.reduce(function(total, player) {
     return total + player.score;
   }, 0);
 
+  timeElapsed = timeElapsed === null ? 0 : timeElapsed['seconds']
   var totalPoints = totalPlayerPoints - Math.round(timeElapsed/60);
   return (
     <table className="stats">
@@ -139,7 +140,6 @@ class Stopwatch extends React.Component {
 
   constructor() {
     super();
-    console.log("constructor");
     this.state = JSON.parse(window.localStorage.getItem('time_state')) || TIME_STATE;
     window.localStorage.setItem('time_state', JSON.stringify(this.state));
   }
