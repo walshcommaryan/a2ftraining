@@ -1,0 +1,5 @@
+{
+  "AppSyncApiName": "a2ftraining",
+  "DynamoDBBillingMode": "PAY_PER_REQUEST",
+  "DynamoDBEnableServerSideEncryption": false
+}

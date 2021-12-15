@@ -25,40 +25,44 @@ const INITIAL_STATE = {
   players: [
     {
       name: "Ryan Walsh",
-      score: 31,
-    },
-    {
-      name: "Leslie Walsh",
-      score: 40,
-    },
+      score: 0,
+    }
   ],
 }
 
 
-const Scoreboard = createReactClass({
-  getInitialState: function () {
-    return INITIAL_STATE;
-  },
+class Scoreboard extends React.Component {
 
-  onScoreChange: function (index, delta) {
+  constructor() {
+    super();
+    this.state = JSON.parse(window.localStorage.getItem('state')) || INITIAL_STATE;
+  }
+
+  setState(state) {
+    window.localStorage.setItem('state', JSON.stringify(state));
+    super.setState(state);
+  }
+
+  onScoreChange (index, delta) {
     this.state.players[index].score += delta;
     this.setState(this.state);
-  },
+  }
 
-  onAddPlayer: function (name) {
+  onAddPlayer (name) {
     this.state.players.push({ name: name, score: 0 });
     this.setState(this.state);
-  },
+  }
 
-  onRemovePlayer: function (index) {
+  onRemovePlayer (index) {
     this.state.players.splice(index, 1);
     this.setState(this.state);
-  },
+  }
 
-  render: function () {
+  render () {
     return (
       <div className="scoreboard">
-        <Header players={this.state.players} />
+        <Header players={this.state.players} 
+        />
         <div className="players">
           {this.state.players.map(function(player, index) {
              return (
@@ -72,16 +76,16 @@ const Scoreboard = createReactClass({
              );
            }.bind(this))}
         </div>
-        <AddPlayerForm onAdd={this.onAddPlayer} />
+        <AddPlayerForm onAdd={(name) =>this.onAddPlayer(name)} />
       </div>
     );
   }
-});
+}
 
 function Header(props) {
   return (
     <div className="header">
-      <Stats players={props.players} />
+      <Stats players={props.players} time={props.second} />
       <h1>Scoreboard</h1>
       {/* <Stopwatch /> */}
     </div>
@@ -94,10 +98,12 @@ Header.propTypes = {
 
 function Stats(props) {
   const playerCount = props.players.length;
-  var totalPoints = props.players.reduce(function(total, player) {
+  var timeElapsed = JSON.parse(window.localStorage.getItem('time_state'))['seconds'];
+  var totalPlayerPoints = props.players.reduce(function(total, player) {
     return total + player.score;
   }, 0);
 
+  var totalPoints = totalPlayerPoints - Math.round(timeElapsed/60);
   return (
     <table className="stats">
       <tbody>
@@ -123,51 +129,75 @@ Stats.propTypes = {
   players: PropTypes.array.isRequired,
 };
 
-const Stopwatch = createReactClass({
-  getInitialState: function () {
-    return ({
-      running: true,
-    });
-  },
+const TIME_STATE = {
+  elapsedTime: 0,
+  previousTime: Date.now(),
+  seconds: 0
+}
 
-  componentDidMount: function () {
-    this.setState({
-      elapsedTime: 0,
-      previousTime: Date.now(),
-    });
-    this.interval = setInterval(this.onTick);
-  },
+class Stopwatch extends React.Component {
 
-  componentWillUnmount: function () {
+  constructor() {
+    super();
+    console.log("constructor");
+    this.state = JSON.parse(window.localStorage.getItem('time_state')) || TIME_STATE;
+    window.localStorage.setItem('time_state', JSON.stringify(this.state));
+  }
+
+  setState(state) {
+    window.localStorage.setItem('time_state', JSON.stringify(state));
+    super.setState(state);
+  }
+
+  componentDidMount() {
+    // this.state = JSON.parse(window.localStorage.getItem('time_state')) || TIME_STATE;
+    this.interval = setInterval(
+        (function(self) {     //Self-executing func which takes 'this' as self
+            return function() {    //Return a function in the context of 'self'
+                  self.onTick();   //Thing you wanted to run as non-window 'this'
+              }
+        })(this),
+    this.INTERVAL     //normal interval, 'this' scope not impacted here.
+    ); 
+  }
+
+  componentWillUnmount() {
     clearInterval(this.interval);
-  },
+  }
 
-  onTick: function () {
-    if (this.state.running) {
-      var now = Date.now();
-      this.setState({
-        elapsedTime: this.state.elapsedTime + (now - this.state.previousTime),
-        previousTime: Date.now(),
-      });
-    }
-  },
-
-  render: function () {
+  onTick() {
+    var now = Date.now();
+    this.state.elapsedTime = this.state.elapsedTime + (now - this.state.previousTime);
+    this.state.previousTime = Date.now();
     var seconds = Math.floor(this.state.elapsedTime / 1000);
+    this.state.seconds = seconds;
+    this.setState(this.state);
+  }
+
+
+  render() {
+
+    function secondsToHms(d) {
+      d = Number(d);
+      var h = Math.floor(d / 3600);
+      var m = Math.floor(d % 3600 / 60);
+      var s = Math.floor(d % 3600 % 60);
+  
+      var hDisplay = h + ":";
+      var mDisplay = m + ":";
+      var sDisplay = s;
+      return hDisplay + mDisplay + sDisplay; 
+    }
+
+    var seconds = this.state.seconds;
     return (
       <div>
         {/* <h2>Stopwatch</h2> */}
-        <div className="stopwatch-time"> {seconds} </div>
-        {/* { this.state.running ?
-          <button onClick={this.onStop}>Stop</button>
-          :
-          <button onClick={this.onStart}>Start</button>
-        }
-        <button onClick={this.onReset}>Reset</button> */}
+        <div className="stopwatch-time"> {secondsToHms(seconds)} </div>
       </div>
     )
   }
-});
+};
 
 function Player(props) {
   return (
@@ -236,26 +266,63 @@ function DropdownMenu() {
       >
         <div className="menu">
 
-          <DropdownItem leftIcon={<BookIcon />} rightIcon={"Reading"} goToMenu="secondary"></DropdownItem>
-          <DropdownItem leftIcon={<WeightIcon />} rightIcon={"Exercise"}></DropdownItem>
-          <DropdownItem leftIcon={<PrayerIcon />} rightIcon={"Prayer"}></DropdownItem>
-          <DropdownItem leftIcon={<BookClubIcon />} rightIcon={"Book Club"}></DropdownItem>
+          <DropdownItem leftIcon={<BookIcon />} rightIcon={"Reading"} goToMenu="reading"></DropdownItem>
+          <DropdownItem leftIcon={<WeightIcon />} rightIcon={"Exercise"} goToMenu="exercise"></DropdownItem>
+          <DropdownItem leftIcon={<PrayerIcon />} rightIcon={"Prayer"} goToMenu="prayer"></DropdownItem>
+          <DropdownItem leftIcon={<BookClubIcon />} rightIcon={"Book Club"} goToMenu="bookClub"></DropdownItem>
 
         </div>
       </CSSTransition>
 
       <CSSTransition 
-      in={activeMenu === 'secondary'} 
-      unmountOnExit
-      timeout={500}
-      classNames="menu-secondary"
-      >
-        <div className="menu">
+        in={activeMenu === 'reading'} 
+        unmountOnExit
+        timeout={500}
+        classNames="menu-secondary"
+        >
+          <div className="menu">
 
-          <DropdownItem leftIcon={<BackArrowIcon />} goToMenu="main"></DropdownItem>
+            <DropdownItem leftIcon={<BackArrowIcon />} goToMenu="main"></DropdownItem>
 
-        </div>
+          </div>
       </CSSTransition>
+      <CSSTransition 
+        in={activeMenu === 'exercise'} 
+        unmountOnExit
+        timeout={500}
+        classNames="menu-secondary"
+        >
+          <div className="menu">
+
+            <DropdownItem leftIcon={<BackArrowIcon />} goToMenu="main"></DropdownItem>
+
+          </div>
+      </CSSTransition>
+      <CSSTransition 
+        in={activeMenu === 'prayer'} 
+        unmountOnExit
+        timeout={500}
+        classNames="menu-secondary"
+        >
+          <div className="menu">
+
+            <DropdownItem leftIcon={<BackArrowIcon />} goToMenu="main"></DropdownItem>
+
+          </div>
+      </CSSTransition>
+      <CSSTransition 
+        in={activeMenu === 'bookClub'} 
+        unmountOnExit
+        timeout={500}
+        classNames="menu-secondary"
+        >
+          <div className="menu">
+
+            <DropdownItem leftIcon={<BackArrowIcon />} goToMenu="main"></DropdownItem>
+
+          </div>
+      </CSSTransition>
+      
     </div>
   );
 }
