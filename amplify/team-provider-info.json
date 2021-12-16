@@ -1,0 +1,15 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-a2ftraining-dev-22701-authRole",
+      "UnauthRoleArn": "arn:aws:iam::365884724436:role/amplify-a2ftraining-dev-22701-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::365884724436:role/amplify-a2ftraining-dev-22701-authRole",
+      "Region": "us-west-1",
+      "DeploymentBucketName": "amplify-a2ftraining-dev-22701-deployment",
+      "UnauthRoleName": "amplify-a2ftraining-dev-22701-unauthRole",
+      "StackName": "amplify-a2ftraining-dev-22701",
+      "StackId": "arn:aws:cloudformation:us-west-1:365884724436:stack/amplify-a2ftraining-dev-22701/b62f1810-5e5a-11ec-b0f9-029c0ba745af",
+      "AmplifyAppId": "dr3x9svk42gmf"
+    }
+  }
+}

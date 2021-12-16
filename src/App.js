@@ -10,11 +10,11 @@ import { ReactComponent as PrayerIcon} from './icons/prayer.svg'
 import { ReactComponent as BookClubIcon} from './icons/bookClub.svg'
 import { ReactComponent as BackArrowIcon} from './icons/back-arrow.svg'
 
-// import Amplify, { API, graphqlOperation } from "aws-amplify";
-// import awsconfig from "./aws-exports";
-// import * as mutations from './graphql/mutations';
-// import * as queries from './graphql/queries';
-// Amplify.configure(awsconfig);
+import Amplify, { API, graphqlOperation } from "aws-amplify";
+import awsconfig from "./aws-exports";
+import * as mutations from './graphql/mutations';
+import * as queries from './graphql/queries';
+Amplify.configure(awsconfig);
 
 var createReactClass = require('create-react-class');
 
@@ -40,9 +40,11 @@ class Scoreboard extends React.Component {
     this.state = JSON.parse(window.localStorage.getItem('state')) || INITIAL_STATE;
   }
 
-  // componentDidMount(){
-  //   this.getPlayers();
-  // }
+  componentDidMount(){
+    console.log("fetching players")
+    this.getPlayers();
+    console.log("players fetched: \n", this.state.players);
+  }
 
   setState(state) {
     window.localStorage.setItem('state', JSON.stringify(state));
@@ -50,58 +52,72 @@ class Scoreboard extends React.Component {
   }
 
   onScoreChange (index, delta) {
-    this.state.players[index].score += delta;
-    this.setTime();
-    this.setState(this.state);
+    this.state.players[index].score = this.state.players[index].score + delta;
+    this.updatePlayerScore(index);
   }
 
-  // async getPlayers() {
-  //   const result = await API.graphql(graphqlOperation(queries.listPlayers, {
-  //     filter: {
-  //         name: {
-  //             eq: "Ryan Walsh"
-  //         }
-  //     }
-  // }));
-  //   console.log(result.data.listPlayers.items);
-  //   return result
-  // }
+  async getPlayers() {
+    const result = await API.graphql(graphqlOperation(queries.listPlayers));
+    var players = result.data.listPlayers.items.filter(player => player._deleted !== true);
+    this.state.players = players;
+    this.setState(this.state);
+    return result
+  }
 
-  // async addPlayer(name) {
+  async addPlayer(name) {
 
-  //   const player = {
-  //     name: name,
-  //     score: 0
-  //   };
+    const player = {
+      name: name,
+      score: 0
+    };
   
-  //   const result = await API.graphql({query: mutations.createPlayer, variables: {input: player}});
-  //   console.log(result);
-  //   this.state.players.push({ 
-  //     id: result.data.createPlayer.id, 
-  //     name: name, 
-  //     score: 0, 
-  //     _version: result.data.createPlayer._version
-  //   });
-  //   this.setState(this.state);
-  //   return result
-  // }
+    const result = await API.graphql({query: mutations.createPlayer, variables: {input: player}});
+    console.log(result);
+    this.state.players.push({ 
+      id: result.data.createPlayer.id, 
+      name: name, 
+      score: 0, 
+      _version: result.data.createPlayer._version
+    });
 
-  // async removePlayer(index) {
+    this.setState(this.state);
+    return result
+  }
 
-  //   var id = this.state.players[index].id
-  //   var version = this.state.players[index]._version
+  async updatePlayerScore(index) {
 
-  //   const player = {
-  //     id: id,
-  //     _version: version
-  //   };
+    var version = this.state.players[index]._version
+
+    var player = {
+      id: this.state.players[index].id,
+      score: this.state.players[index].score,
+      _version: version
+    };
   
-  //   const result = await API.graphql({query: mutations.deletePlayer, variables: {input: player}});
-  //   console.log(result);
-  //   this.state.players.splice(index, 1);
-  //   this.setState(this.state);
-  //   return result
-  // }
+    const result = await API.graphql({query: mutations.updatePlayer, variables: {input: player}});
+    console.log(result);
+
+    this.state.players[index]._version = result.data.updatePlayer._version;
+    this.setState(this.state);
+    return result
+  }
+
+  async removePlayer(index) {
+
+    var id = this.state.players[index].id
+    var version = this.state.players[index]._version
+
+    var player = {
+      id: id,
+      _version: version
+    };
+  
+    const result = await API.graphql({query: mutations.deletePlayer, variables: {input: player}});
+    console.log(result);
+    this.state.players.splice(index, 1);
+    this.setState(this.state);
+    return result
+  }
 
   onAddPlayer (name) {
     this.addPlayer(name);
