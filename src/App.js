@@ -10,6 +10,12 @@ import { ReactComponent as PrayerIcon} from './icons/prayer.svg'
 import { ReactComponent as BookClubIcon} from './icons/bookClub.svg'
 import { ReactComponent as BackArrowIcon} from './icons/back-arrow.svg'
 
+import Amplify, { API, graphqlOperation } from "aws-amplify";
+import awsconfig from "./aws-exports";
+import * as mutations from './graphql/mutations';
+import * as queries from './graphql/queries';
+Amplify.configure(awsconfig);
+
 var createReactClass = require('create-react-class');
 
 function App() {
@@ -23,10 +29,6 @@ export default App;
 
 const INITIAL_STATE = {
   players: [
-    {
-      name: "Ryan Walsh",
-      score: 0,
-    }
   ],
 }
 
@@ -38,6 +40,10 @@ class Scoreboard extends React.Component {
     this.state = JSON.parse(window.localStorage.getItem('state')) || INITIAL_STATE;
   }
 
+  componentDidMount(){
+    this.getPlayers();
+  }
+
   setState(state) {
     window.localStorage.setItem('state', JSON.stringify(state));
     super.setState(state);
@@ -45,17 +51,64 @@ class Scoreboard extends React.Component {
 
   onScoreChange (index, delta) {
     this.state.players[index].score += delta;
+    this.setTime();
     this.setState(this.state);
+  }
+
+  async getPlayers() {
+    const result = await API.graphql(graphqlOperation(queries.listPlayers, {
+      filter: {
+          name: {
+              eq: "Ryan Walsh"
+          }
+      }
+  }));
+    console.log(result.data.listPlayers.items);
+    return result
+  }
+
+  async addPlayer(name) {
+
+    const player = {
+      name: name,
+      points: 0
+    };
+  
+    const result = await API.graphql({query: mutations.createPlayer, variables: {input: player}});
+    console.log(result);
+    this.state.players.push({ 
+      id: result.data.createPlayer.id, 
+      name: name, 
+      score: 0, 
+      _version: result.data.createPlayer._version
+    });
+    this.setState(this.state);
+    return result
+  }
+
+  async removePlayer(index) {
+
+    var id = this.state.players[index].id
+    var version = this.state.players[index]._version
+
+    const player = {
+      id: id,
+      _version: version
+    };
+  
+    const result = await API.graphql({query: mutations.deletePlayer, variables: {input: player}});
+    console.log(result);
+    this.state.players.splice(index, 1);
+    this.setState(this.state);
+    return result
   }
 
   onAddPlayer (name) {
-    this.state.players.push({ name: name, score: 0 });
-    this.setState(this.state);
+    this.addPlayer(name);
   }
 
   onRemovePlayer (index) {
-    this.state.players.splice(index, 1);
-    this.setState(this.state);
+    this.removePlayer(index);
   }
 
   render () {
@@ -132,7 +185,7 @@ Stats.propTypes = {
 
 const TIME_STATE = {
   elapsedTime: 0,
-  previousTime: Date.now(),
+  previousTime: new Date("12/14/2021 18:30:00"),
   seconds: 0
 }
 
@@ -167,6 +220,7 @@ class Stopwatch extends React.Component {
 
   onTick() {
     var now = Date.now();
+    // console.log(this.getTime())
     this.state.elapsedTime = this.state.elapsedTime + (now - this.state.previousTime);
     this.state.previousTime = Date.now();
     var seconds = Math.floor(this.state.elapsedTime / 1000);
@@ -337,11 +391,11 @@ Player.propTypes = {
 function Counter(props) {
   return (
     <div className="counter" >
-      <button className="counter-action decrement" onClick={() => props.onChange(-1)}>
+      <button className="counter-action decrement" onClick={() => props.onChange(-100)}>
         -
       </button>
       <div className="counter-score"> {props.score} </div>
-      <button className="counter-action increment" onClick={() => props.onChange(1)}>
+      <button className="counter-action increment" onClick={() => props.onChange(100)}>
         +
       </button>
     </div>
