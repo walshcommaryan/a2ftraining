@@ -209,7 +209,7 @@ class Stopwatch extends React.Component {
 
   constructor() {
     super();
-    this.state = JSON.parse(window.localStorage.getItem('time_state')) || TIME_STATE;
+    this.state = TIME_STATE;
     window.localStorage.setItem('time_state', JSON.stringify(this.state));
   }
 
